@@ -1,7 +1,7 @@
 import { ref, watchEffect } from 'vue';
 import { projectFirestore } from '../firebase/config';
 
-const getCollection = (collection) => {
+const getCollection = (collection, query) => {
 
     const documents = ref(null);
     const error = ref(null);
@@ -10,12 +10,14 @@ const getCollection = (collection) => {
     let collectionRef = projectFirestore.collection(collection)
         .orderBy('createdAt');
 
+    if (query) {
+        collectionRef = collectionRef.where(...query);
+    }
+
     const unsub = collectionRef.onSnapshot(snap => {
-        console.log(snap);
         let results = [];
         snap.docs.forEach(doc => {
             // must wait for the server to create the timestamp & send it back
-            // we don't want to edit data until it has done this
             doc.data().createdAt && results.push({ ...doc.data(), id: doc.id });
         });
 
@@ -29,7 +31,6 @@ const getCollection = (collection) => {
     });
 
     watchEffect((onInvalidate) => {
-        // unsub from prev collection when watcher is stopped (component unmounted)
         onInvalidate(() => unsub());
     });
 
